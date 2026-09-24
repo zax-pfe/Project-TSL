@@ -147,6 +147,23 @@ export default class LaserCanon extends EventEmitter {
       const ratio = progress;
       return sin(ratio.mul(PI));
     })();
+
+    // // Position
+    // this.material.positionNode = Fn(() => {
+    //   // radius
+
+    //   const radiusIn = progress.remap(0, 0.075);
+    //   const radiusOut = progress.remap(0.075, 1, 1, 0.3);
+
+    //   const radiusFinal = min(radiusIn, radiusOut).oneMinus().pow(2).oneMinus();
+
+    //   positionLocal.mulAssign(radiusFinal);
+
+    //   // floor clamp
+    //   positionLocal.y.assign(max(positionLocal.y, 0.1));
+
+    //   return positionLocal;
+    // })();
   }
   setLaserMesh() {
     this.laserMesh = new THREE.Mesh(this.laserGeometry, this.laserMaterial);

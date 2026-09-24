@@ -96,6 +96,34 @@ const bloomGui = renderer.inspector.createParameters("Bloom").close();
 bloomGui.add(bloomPass.threshold, "value", 0, 2, 0.01).name("threshold");
 bloomGui.add(bloomPass.strength, "value", 0, 2, 0.01).name("strength");
 
+// ______________________________ Movements Input ______________________________//
+let movement;
+movement = { forward: 0, right: 0 };
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "w" || event.key === "ArrowUp") movement.forward = 1;
+  if (event.key === "s" || event.key === "ArrowDown") movement.forward = -1;
+  if (event.key === "a" || event.key === "ArrowLeft") movement.right = -1;
+  if (event.key === "d" || event.key === "ArrowRight") movement.right = 1;
+});
+
+window.addEventListener("keyup", (event) => {
+  if (
+    event.key === "w" ||
+    event.key === "s" ||
+    event.key === "ArrowUp" ||
+    event.key === "ArrowDown"
+  )
+    movement.forward = 0;
+  if (
+    event.key === "a" ||
+    event.key === "d" ||
+    event.key === "ArrowLeft" ||
+    event.key === "ArrowRight"
+  )
+    movement.right = 0;
+});
+
 // ______________________________ Control ______________________________//
 const control = new TransformControls(camera, renderer.domElement);
 control.setMode("translate");

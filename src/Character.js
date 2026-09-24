@@ -18,7 +18,7 @@ import {
 } from "three/tsl";
 
 export default class Character {
-  constructor() {
+  constructor(movement) {
     console.log("Character constructor");
 
     this.setGeometry();
