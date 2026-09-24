@@ -9,12 +9,4 @@ export default class StateMachine extends EventEmitter {
 
     this.laserToFire = null;
   }
-
-  setLaserToFire(CanonLaserId) {
-    this.laserToFire = CanonLaserId;
-  }
-
-  fire = () => {
-    this.trigger("fire", [this.laserToFire]);
-  };
 }

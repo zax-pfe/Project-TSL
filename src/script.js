@@ -10,6 +10,7 @@ import LaserCanon from "./LaserCanon.js";
 import Character from "./Character.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import StateMachine from "./StateMachine.js";
+import GameManager from "./GameManager.js";
 
 // idée sol reaction au pas de l'utilisateur
 // trainée/neige
@@ -101,22 +102,22 @@ let movement;
 movement = { forward: 0, right: 0 };
 
 window.addEventListener("keydown", (event) => {
-  if (event.key === "w" || event.key === "ArrowUp") movement.forward = 1;
+  if (event.key === "z" || event.key === "ArrowUp") movement.forward = 1;
   if (event.key === "s" || event.key === "ArrowDown") movement.forward = -1;
-  if (event.key === "a" || event.key === "ArrowLeft") movement.right = -1;
+  if (event.key === "q" || event.key === "ArrowLeft") movement.right = -1;
   if (event.key === "d" || event.key === "ArrowRight") movement.right = 1;
 });
 
 window.addEventListener("keyup", (event) => {
   if (
-    event.key === "w" ||
+    event.key === "z" ||
     event.key === "s" ||
     event.key === "ArrowUp" ||
     event.key === "ArrowDown"
   )
     movement.forward = 0;
   if (
-    event.key === "a" ||
+    event.key === "q" ||
     event.key === "d" ||
     event.key === "ArrowLeft" ||
     event.key === "ArrowRight"
@@ -140,10 +141,14 @@ scene.add(gizmo);
 
 const stateMachine = new StateMachine();
 
-stateMachine.setLaserToFire([0, 3, 6]);
+// game manager, recupere tout les event du jeux, conteni les
 
-const stateMachineGui = renderer.inspector.createParameters("StateMachine").close();
-stateMachineGui.add(stateMachine, "fire").name("Fire");
+// ______________________________ Game Manager ______________________________//
+const gameManager = new GameManager();
+gameManager.setLaserToFire([0, 3, 6]);
+
+const gameManagerGui = renderer.inspector.createParameters("gameManager").close();
+gameManagerGui.add(gameManager, "fire").name("Fire");
 
 // ______________________________ Explosions ______________________________//
 
@@ -191,10 +196,14 @@ const simplexTexture = await textureLoader.loadAsync("./simplex-tiling-noise-256
 simplexTexture.wrapS = THREE.RepeatWrapping;
 simplexTexture.wrapT = THREE.RepeatWrapping;
 
+// const perlinTexture = await textureLoader.loadAsync("./perlin.jpg");
+// perlinTexture.wrapS = THREE.RepeatWrapping;
+// perlinTexture.wrapT = THREE.RepeatWrapping;
+
 function createLaserCanon(id, position, rotation, withControl = true) {
   const laser_canon = new LaserCanon(
     id,
-    stateMachine,
+    gameManager,
     position,
     rotation,
     simplexTexture,
@@ -319,9 +328,15 @@ lightsGui.add(ambientLight, "intensity", 0, 5, 0.01).name("ambientIntensity");
 /**
  * Animate
  */
-const tick = () => {
+let previousTime;
+const tick = (currentTime) => {
+  // Temps en secondes, limite pour eviter un saut au retour sur l'onglet.
+  const deltaTime =
+    previousTime === undefined ? 0 : Math.min((currentTime - previousTime) / 1000, 0.05);
+  previousTime = currentTime;
   // Mettre à jour la caméra (notamment son amortissement).
   controls.update();
+  character.animate(movement, deltaTime);
 
   // Dessiner la scène et le gizmo avec le post-traitement.
   // TransformControls modifie l'objet directement via les événements souris.

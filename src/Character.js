@@ -16,10 +16,14 @@ import {
   uniform,
   max,
 } from "three/tsl";
+import { Console } from "three/examples/jsm/inspector/tabs/Console.js";
 
 export default class Character {
-  constructor(movement) {
+  constructor() {
     console.log("Character constructor");
+
+    this.speed = 3; // Unites par seconde.
+    this.translation = new THREE.Vector3();
 
     this.setGeometry();
     this.setMaterial();
@@ -43,5 +47,20 @@ export default class Character {
     this.mesh.receiveShadow = true;
     this.mesh.position.y = 1;
     this.renderOrder = 1;
+  }
+
+  computeMovement(movement, deltaTime) {
+    this.translation.set(movement.right, 0, -movement.forward);
+    // Limiter les diagonales tout en conservant les petites valeurs analogiques.
+    this.translation.clampLength(0, 1);
+    this.translation.multiplyScalar(this.speed * deltaTime);
+    return this.translation;
+  }
+
+  animate(movement, deltaTime) {
+    const translation = this.computeMovement(movement, deltaTime);
+    this.mesh.position.add(translation);
+    this.mesh.position.x = THREE.MathUtils.clamp(this.mesh.position.x, -5, 5);
+    this.mesh.position.z = THREE.MathUtils.clamp(this.mesh.position.z, -5, 5);
   }
 }
