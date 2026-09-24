@@ -1,0 +1,286 @@
+import * as THREE from "three/webgpu";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { Inspector } from "three/addons/inspector/Inspector.js";
+import { SkyMesh } from "three/addons/objects/SkyMesh.js";
+import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
+import { pass, uv, color, float, uniform } from "three/tsl";
+import Explosions from "./Explosions.js";
+import Ground from "./Ground.js";
+import LaserCanon from "./LaserCanon.js";
+import Character from "./Character.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+import StateMachine from "./StateMachine.js";
+
+// idée sol reaction au pas de l'utilisateur
+// trainée/neige
+
+/**
+ * Base
+ */
+// Canvas
+const canvas = document.querySelector("canvas.threejs");
+
+// Scene
+const scene = new THREE.Scene();
+
+// Loaders
+const textureLoader = new THREE.TextureLoader();
+
+/**
+ * Sizes
+ */
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+};
+
+window.addEventListener("resize", () => {
+  // Update sizes
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
+
+  // Update camera
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+
+  // Update renderer
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+/**
+ * Camera
+ */
+// Base camera
+const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 100);
+camera.position.x = 7;
+camera.position.y = 2.5;
+camera.position.z = 7;
+scene.add(camera);
+
+// Controls
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0, 0);
+controls.enableDamping = true;
+controls.enabled = true;
+
+/**
+ * Renderer
+ */
+const renderer = new THREE.WebGPURenderer({
+  canvas: canvas,
+  antialias: true,
+});
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.transmitted = false;
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x111111);
+renderer.inspector = new Inspector();
+
+/**
+ * Post processing
+ */
+const renderPipeline = new THREE.RenderPipeline(renderer);
+const scenePass = pass(scene, camera);
+const scenePassColor = scenePass.getTextureNode("output");
+const bloomPass = bloom(scenePassColor);
+bloomPass.threshold.value = 0;
+bloomPass.strength.value = 0.05;
+
+renderPipeline.outputNode = scenePassColor.add(bloomPass);
+
+const bloomGui = renderer.inspector.createParameters("Bloom").close();
+bloomGui.add(bloomPass.threshold, "value", 0, 2, 0.01).name("threshold");
+bloomGui.add(bloomPass.strength, "value", 0, 2, 0.01).name("strength");
+
+// ______________________________ Control ______________________________//
+const control = new TransformControls(camera, renderer.domElement);
+control.setMode("translate");
+
+// Suspendre la rotation de la caméra pendant la manipulation du gizmo.
+control.addEventListener("dragging-changed", function (event) {
+  controls.enabled = !event.value;
+});
+
+const gizmo = control.getHelper();
+scene.add(gizmo);
+
+// ______________________________ State Machine ______________________________//
+
+const stateMachine = new StateMachine();
+
+stateMachine.setLaserToFire([0, 3, 6]);
+
+const stateMachineGui = renderer.inspector.createParameters("StateMachine").close();
+stateMachineGui.add(stateMachine, "fire").name("Fire");
+
+// ______________________________ Explosions ______________________________//
+
+// SImplex texture
+// const simplexTexture = await textureLoader.loadAsync("./simplex-tiling-noise-256x256.png");
+// simplexTexture.wrapS = THREE.RepeatWrapping;
+// simplexTexture.wrapT = THREE.RepeatWrapping;
+
+// const explosions = new Explosions(
+//   simplexTexture,
+//   5,
+//   uniform(color(0x1111ff)),
+//   uniform(color(0xff1111)),
+//   uniform(float(30)),
+// );
+// scene.add(explosions.mesh);
+
+// const explosionsGui = renderer.inspector.createParameters("Explosions").close();
+// explosionsGui.addColor(explosions.emissiveColorA, "value").name("emissiveColorA");
+// explosionsGui.addColor(explosions.emissiveColorB, "value").name("emissiveColorB");
+// explosionsGui.add(explosions.emissiveStrength, "value", 1, 100, 1).name("emissiveStrength");
+
+// ______________________________ Floor ______________________________//
+
+const ground = new Ground();
+scene.add(ground.mesh);
+
+// {
+//   const texture = textureLoader.load("./floor-color.jpg");
+//   texture.colorSpace = THREE.SRGBColorSpace;
+//   const mesh = new THREE.Mesh(
+//     new THREE.PlaneGeometry(10, 10),
+//     new THREE.MeshStandardNodeMaterial({ map: texture, transparent: true }),
+//   );
+//   mesh.material.opacityNode = uv().sub(0.5).length().smoothstep(0.5, 0.2);
+//   mesh.rotation.x = -Math.PI * 0.5;
+//   mesh.receiveShadow = true;
+//   mesh.renderOrder = -1;
+//   scene.add(mesh);
+// }
+
+// ______________________________ Laser ______________________________//
+
+function createLaserCanon(id, position, rotation, withControl = true) {
+  const laser_canon = new LaserCanon(id, stateMachine, position, rotation);
+
+  scene.add(laser_canon.group);
+
+  if (withControl) {
+    control.attach(laser_canon.group);
+  }
+}
+
+let z_laser_1 = -6;
+let y_laser_1 = 1;
+
+let rotatation_laser_1 = new THREE.Euler(0, 0, 0);
+
+createLaserCanon(0, new THREE.Vector3(4, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(1, new THREE.Vector3(2, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(2, new THREE.Vector3(0, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(3, new THREE.Vector3(-2, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(4, new THREE.Vector3(-4, y_laser_1, z_laser_1), rotatation_laser_1, false);
+
+let y_laser_2 = 1;
+let x_laser_2 = -6;
+
+let rotatation_laser_2 = new THREE.Euler(0, Math.PI * 0.5, 0);
+
+createLaserCanon(5, new THREE.Vector3(x_laser_2, y_laser_2, 4), rotatation_laser_2, false);
+createLaserCanon(6, new THREE.Vector3(x_laser_2, y_laser_2, 2), rotatation_laser_2, false);
+createLaserCanon(7, new THREE.Vector3(x_laser_2, y_laser_2, 0), rotatation_laser_2, false);
+createLaserCanon(8, new THREE.Vector3(x_laser_2, y_laser_2, -2), rotatation_laser_2, false);
+createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, -4), rotatation_laser_2, false);
+
+// ______________________________ Character ______________________________//
+
+const character = new Character();
+scene.add(character.mesh);
+
+/**
+ * Sky
+ */
+// const sky = new SkyMesh();
+// sky.scale.setScalar(1000);
+// scene.add(sky);
+// const effectController = {
+//   turbidity: 5.5,
+//   rayleigh: 1.25,
+//   mieCoefficient: 0.02,
+//   mieDirectionalG: 0.35,
+//   elevation: 0.4,
+//   azimuth: 131,
+//   cloudCoverage: 0.4,
+//   cloudDensity: 0.4,
+//   cloudElevation: 0.5,
+// };
+
+// const sun = new THREE.Vector3();
+
+// const skyChanged = () => {
+//   sky.turbidity.value = effectController.turbidity;
+//   sky.rayleigh.value = effectController.rayleigh;
+//   sky.mieCoefficient.value = effectController.mieCoefficient;
+//   sky.mieDirectionalG.value = effectController.mieDirectionalG;
+//   sky.cloudCoverage.value = effectController.cloudCoverage;
+//   sky.cloudDensity.value = effectController.cloudDensity;
+//   sky.cloudElevation.value = effectController.cloudElevation;
+
+//   const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
+//   const theta = THREE.MathUtils.degToRad(effectController.azimuth);
+
+//   sun.setFromSphericalCoords(1, phi, theta);
+
+//   sky.sunPosition.value.copy(sun);
+// };
+
+// skyChanged();
+
+// // Debug
+// const skyGui = renderer.inspector.createParameters("Sky").close();
+
+// skyGui.add(effectController, "turbidity", 0.0, 20.0, 0.1).onChange(skyChanged);
+// skyGui.add(effectController, "rayleigh", 0.0, 4, 0.001).onChange(skyChanged);
+// skyGui.add(effectController, "mieCoefficient", 0.0, 0.1, 0.001).onChange(skyChanged);
+// skyGui.add(effectController, "mieDirectionalG", 0.0, 1, 0.001).onChange(skyChanged);
+// skyGui.add(effectController, "elevation", -10, 90, 0.1).onChange(skyChanged);
+// skyGui.add(effectController, "azimuth", -180, 180, 0.1).onChange(skyChanged);
+
+/**
+ * Lights
+ */
+const directionalLight = new THREE.DirectionalLight(0xffffff, 4);
+directionalLight.position.set(1, 0.5, -0.75).normalize().multiplyScalar(10);
+directionalLight.shadow.camera.near = 0.01;
+directionalLight.shadow.camera.far = 30;
+directionalLight.shadow.mapSize.set(1024, 1024);
+directionalLight.castShadow = true;
+directionalLight.shadow.radius = 5;
+directionalLight.shadow.normalBias = 0.1;
+scene.add(directionalLight);
+
+const ambientLight = new THREE.AmbientLight(0xffa985, 1);
+scene.add(ambientLight);
+
+// Debug
+const lightsGui = renderer.inspector.createParameters("Lights").close();
+
+lightsGui.addColor(directionalLight, "color").name("directionalColor");
+lightsGui.add(directionalLight, "intensity", 0, 5, 0.01).name("directionalIntensity");
+
+lightsGui.addColor(ambientLight, "color").name("ambientColor");
+lightsGui.add(ambientLight, "intensity", 0, 5, 0.01).name("ambientIntensity");
+
+/**
+ * Animate
+ */
+const tick = () => {
+  // Mettre à jour la caméra (notamment son amortissement).
+  controls.update();
+
+  // Dessiner la scène et le gizmo avec le post-traitement.
+  // TransformControls modifie l'objet directement via les événements souris.
+  renderPipeline.render();
+};
+
+// Enregistrer une seule fois la fonction que Three.js appellera à chaque frame.
+renderer.setAnimationLoop(tick);
