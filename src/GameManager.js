@@ -12,7 +12,6 @@ export default class GameManager extends EventEmitter {
       if (this.pendingLasers.size > 0) return;
 
       this.level++;
-      this.generateListid();
       this.fire();
     });
   }
@@ -21,7 +20,7 @@ export default class GameManager extends EventEmitter {
   }
 
   generateListid() {
-    const count = Math.min(3 + this.level, 7);
+    const count = 4 + Math.floor(Math.random() * 4);
     const availableIds = Array.from({ length: 10 }, (_, id) => id);
     const groupCounts = [0, 0];
     this.laserToFire = [];

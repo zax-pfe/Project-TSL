@@ -69,6 +69,7 @@ export default class Character {
       "./3D/character.glb",
       (gltf) => {
         this.model = gltf.scene;
+        this.model.scale.set(1.3, 1.2, 1.3);
         this.setMaterial();
 
         this.mesh.add(this.model);

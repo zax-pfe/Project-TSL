@@ -149,7 +149,7 @@ export default class LaserCanon extends EventEmitter {
     gsap.to(dummy, {
       progressLight: 1,
       duration: 2,
-      ease: "power1.in",
+      ease: "none",
       onUpdate: () => {
         this.progressLight.value = dummy.progressLight;
       },
@@ -168,9 +168,11 @@ export default class LaserCanon extends EventEmitter {
             this.progressLaser.value = dummy.porgressLaser;
           },
           onComplete: () => {
-            window.dispatchEvent(new CustomEvent("game:endFire", {
-              detail: { id: this.id },
-            }));
+            window.dispatchEvent(
+              new CustomEvent("game:endFire", {
+                detail: { id: this.id },
+              }),
+            );
           },
         });
 
@@ -317,7 +319,9 @@ export default class LaserCanon extends EventEmitter {
 
       const finalNoise = noise1.add(noise2).div(2).pow(2);
 
-      return finalNoise.sub(progress).greaterThan(0).oneMinus();
+      const lightProgress = progress.mul(0.7);
+
+      return finalNoise.sub(lightProgress).greaterThan(0).oneMinus();
 
       // return vec3(finalNoise.sub(progress).greaterThan(0));
       // return vec3(noise1);
