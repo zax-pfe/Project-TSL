@@ -168,13 +168,15 @@ export default class LaserCanon extends EventEmitter {
             this.progressLaser.value = dummy.porgressLaser;
           },
           onComplete: () => {
-            console.log("anim finished");
+            window.dispatchEvent(new CustomEvent("game:endFire", {
+              detail: { id: this.id },
+            }));
           },
         });
 
         gsap.to(dummy, {
           progressCanon: 1,
-          duration: 3,
+          duration: 2,
           ease: "elastic.out",
           onUpdate: () => {
             this.progressCanon.value = dummy.progressCanon;

@@ -14,6 +14,7 @@ import Character from "./Character.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import StateMachine from "./StateMachine.js";
 import GameManager from "./GameManager.js";
+import SoundManager from "./SoundManager.js";
 
 // idée sol reaction au pas de l'utilisateur
 // trainée/neige
@@ -187,6 +188,9 @@ control.addEventListener("dragging-changed", function (event) {
 const gizmo = control.getHelper();
 scene.add(gizmo);
 
+// ______________________________ Sound ______________________________//
+
+const soundManger = new SoundManager();
 // ______________________________ State Machine ______________________________//
 
 const stateMachine = new StateMachine();
@@ -201,51 +205,8 @@ const gameManagerGui = renderer.inspector.createParameters("gameManager").close(
 gameManagerGui.add(gameManager, "fire").name("Fire");
 gameManagerGui.add(gameManager, "hit").name("hit");
 
-// ______________________________ Explosions ______________________________//
-
-// SImplex texture
-// const simplexTexture = await textureLoader.loadAsync("./simplex-tiling-noise-256x256.png");
-// simplexTexture.wrapS = THREE.RepeatWrapping;
-// simplexTexture.wrapT = THREE.RepeatWrapping;
-
-// const explosions = new Explosions(
-//   simplexTexture,
-//   5,
-//   uniform(color(0x1111ff)),
-//   uniform(color(0xff1111)),
-//   uniform(float(30)),
-// );
-// scene.add(explosions.mesh);
-
-// const explosionsGui = renderer.inspector.createParameters("Explosions").close();
-// explosionsGui.addColor(explosions.emissiveColorA, "value").name("emissiveColorA");
-// explosionsGui.addColor(explosions.emissiveColorB, "value").name("emissiveColorB");
-// explosionsGui.add(explosions.emissiveStrength, "value", 1, 100, 1).name("emissiveStrength");
-
 // ______________________________ Floor ______________________________//
-
-// function load(file, colorSpace) {
-//   const map = textureLoader.load(`/textures/ground/${file}`);
-
-//   map.wrapS = THREE.RepeatWrapping;
-//   map.wrapT = THREE.RepeatWrapping;
-//   map.anisotropy = 8;
-//   if (colorSpace) map.colorSpace = colorSpace;
-
-//   return map;
-// }
-
-// const diffuse = load("metal_plate_diff_1k.jpg", THREE.SRGBColorSpace);
-
-// const normal = load("Vol_18_2_Normal.png");
-
-// const ground = new Ground(diffuse, normal);
-// scene.add(ground.mesh);
-
 {
-  // const texture = textureLoader.load("./textureColor.png");
-
-  // const texture = textureLoader.load("./floor-color.jpg");
   const texture = await textureLoader.loadAsync("./textureColor.png");
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
@@ -256,17 +217,6 @@ gameManagerGui.add(gameManager, "hit").name("hit");
 
   const ground = new Ground(texture, normal);
   scene.add(ground.mesh);
-
-  // const texture = textureLoader.load("./floor-color.jpg");
-  // const mesh = new THREE.Mesh(
-  //   new THREE.PlaneGeometry(10, 10),
-  //   new THREE.MeshStandardNodeMaterial({ map: texture, transparent: true }),
-  // );
-  // mesh.material.opacityNode = uv().sub(0.5).length().smoothstep(0.5, 0.2);
-  // mesh.rotation.x = -Math.PI * 0.5;
-  // mesh.receiveShadow = true;
-  // mesh.renderOrder = -1;
-  // scene.add(mesh);
 }
 
 // ______________________________ Laser ______________________________//
@@ -329,64 +279,10 @@ createLaserCanon(7, new THREE.Vector3(x_laser_2, y_laser_2, 0), rotatation_laser
 createLaserCanon(8, new THREE.Vector3(x_laser_2, y_laser_2, -2), rotatation_laser_2, false);
 createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, -4), rotatation_laser_2, false);
 
-// const explosionsGui = renderer.inspector.createParameters("Explosions").close();
-// explosionsGui.addColor(explosions.emissiveColorA, "value").name("emissiveColorA");
-// explosionsGui.addColor(explosions.emissiveColorB, "value").name("emissiveColorB");
-// explosionsGui.add(explosions.emissiveStrength, "value", 1, 100, 1).name("emissiveStrength");
-
 // ______________________________ Character ______________________________//
 
 const character = new Character(simplexTexture);
 scene.add(character.mesh);
-
-/**
- * Sky
- */
-// const sky = new SkyMesh();
-// sky.scale.setScalar(1000);
-// scene.add(sky);
-// const effectController = {
-//   turbidity: 5.5,
-//   rayleigh: 1.25,
-//   mieCoefficient: 0.02,
-//   mieDirectionalG: 0.35,
-//   elevation: 0.4,
-//   azimuth: 131,
-//   cloudCoverage: 0.4,
-//   cloudDensity: 0.4,
-//   cloudElevation: 0.5,
-// };
-
-// const sun = new THREE.Vector3();
-
-// const skyChanged = () => {
-//   sky.turbidity.value = effectController.turbidity;
-//   sky.rayleigh.value = effectController.rayleigh;
-//   sky.mieCoefficient.value = effectController.mieCoefficient;
-//   sky.mieDirectionalG.value = effectController.mieDirectionalG;
-//   sky.cloudCoverage.value = effectController.cloudCoverage;
-//   sky.cloudDensity.value = effectController.cloudDensity;
-//   sky.cloudElevation.value = effectController.cloudElevation;
-
-//   const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
-//   const theta = THREE.MathUtils.degToRad(effectController.azimuth);
-
-//   sun.setFromSphericalCoords(1, phi, theta);
-
-//   sky.sunPosition.value.copy(sun);
-// };
-
-// skyChanged();
-
-// // Debug
-// const skyGui = renderer.inspector.createParameters("Sky").close();
-
-// skyGui.add(effectController, "turbidity", 0.0, 20.0, 0.1).onChange(skyChanged);
-// skyGui.add(effectController, "rayleigh", 0.0, 4, 0.001).onChange(skyChanged);
-// skyGui.add(effectController, "mieCoefficient", 0.0, 0.1, 0.001).onChange(skyChanged);
-// skyGui.add(effectController, "mieDirectionalG", 0.0, 1, 0.001).onChange(skyChanged);
-// skyGui.add(effectController, "elevation", -10, 90, 0.1).onChange(skyChanged);
-// skyGui.add(effectController, "azimuth", -180, 180, 0.1).onChange(skyChanged);
 
 /**
  * Lights
