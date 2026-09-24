@@ -15,7 +15,10 @@ import {
   min,
   uniform,
   max,
+  sin,
+  PI,
 } from "three/tsl";
+import gsap from "gsap";
 
 import EventEmitter from "./Utils/EventEmitter.js";
 
@@ -32,6 +35,15 @@ export default class LaserCanon extends EventEmitter {
   ) {
     console.log("LaserCanon constructor");
     super();
+
+    // _______________ Laser Shader Settings _______________//
+
+    this.simplexTexture = simplexTexture;
+    this.emissiveColorA = emissiveColorA;
+    this.emissiveColorB = emissiveColorB;
+    this.emissiveStrength = emissiveStrength;
+
+    this.progress = uniform(0);
 
     // _______________ Laser Canon Settings _______________//
     this.id = id;
@@ -52,13 +64,6 @@ export default class LaserCanon extends EventEmitter {
     this.group.position.copy(this.position);
     this.group.rotation.copy(this.rotation);
 
-    // _______________ Laser Shader Settings _______________//
-
-    this.simplexTexture = simplexTexture;
-    this.emissiveColorA = emissiveColorA;
-    this.emissiveColorB = emissiveColorB;
-    this.emissiveStrength = emissiveStrength;
-
     this.stateMachine.on("fire", (id) => {
       if (id.includes(this.id)) {
         this.fireLaser();
@@ -67,7 +72,23 @@ export default class LaserCanon extends EventEmitter {
   }
 
   fireLaser() {
+    // d'abord le laser va s'allumer lentement, chemin de particules
+    // puis le rayon va grossir d'un coup et l'anim va se jouer
     console.log("fire event received in LaserCanon", this.id);
+
+    const dummy = { progress: 0 };
+
+    gsap.to(dummy, {
+      progress: 1,
+      duration: 2,
+      ease: "linear",
+      onUpdate: () => {
+        this.progress.value = dummy.progress;
+      },
+      onComplete: () => {
+        console.log("anim finished");
+      },
+    });
   }
 
   // ______________________________ Canon ______________________________//
@@ -103,9 +124,29 @@ export default class LaserCanon extends EventEmitter {
     this.laserGeometry = new THREE.CylinderGeometry(0.1, 0.1, 12, 32);
   }
   setLaserMaterial() {
+    // const progress = time.mul(0.25).fract();
+    // const progress = float(0);
+
+    const progress = this.progress;
+
     this.laserMaterial = new THREE.MeshStandardNodeMaterial({
-      color: 0x00ff00, // green
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthTest: false,
     });
+
+    this.laserMaterial.emissiveNode = Fn(() => {
+      const emissiveMix = progress.smoothstep(0, 0.7);
+      const emissiveColor = mix(this.emissiveColorA, this.emissiveColorB, emissiveMix);
+
+      const emissiveStrength = this.emissiveStrength;
+      return emissiveColor.mul(emissiveStrength);
+    })();
+
+    this.laserMaterial.opacityNode = Fn(() => {
+      const ratio = progress;
+      return sin(ratio.mul(PI));
+    })();
   }
   setLaserMesh() {
     this.laserMesh = new THREE.Mesh(this.laserGeometry, this.laserMaterial);

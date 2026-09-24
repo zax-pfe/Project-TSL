@@ -159,8 +159,21 @@ scene.add(ground.mesh);
 
 // ______________________________ Laser ______________________________//
 
+const simplexTexture = await textureLoader.loadAsync("./simplex-tiling-noise-256x256.png");
+simplexTexture.wrapS = THREE.RepeatWrapping;
+simplexTexture.wrapT = THREE.RepeatWrapping;
+
 function createLaserCanon(id, position, rotation, withControl = true) {
-  const laser_canon = new LaserCanon(id, stateMachine, position, rotation);
+  const laser_canon = new LaserCanon(
+    id,
+    stateMachine,
+    position,
+    rotation,
+    simplexTexture,
+    uniform(color(0x1111ff)),
+    uniform(color(0xff1111)),
+    uniform(float(30)),
+  );
 
   scene.add(laser_canon.group);
 
@@ -190,6 +203,11 @@ createLaserCanon(6, new THREE.Vector3(x_laser_2, y_laser_2, 2), rotatation_laser
 createLaserCanon(7, new THREE.Vector3(x_laser_2, y_laser_2, 0), rotatation_laser_2, false);
 createLaserCanon(8, new THREE.Vector3(x_laser_2, y_laser_2, -2), rotatation_laser_2, false);
 createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, -4), rotatation_laser_2, false);
+
+// const explosionsGui = renderer.inspector.createParameters("Explosions").close();
+// explosionsGui.addColor(explosions.emissiveColorA, "value").name("emissiveColorA");
+// explosionsGui.addColor(explosions.emissiveColorB, "value").name("emissiveColorB");
+// explosionsGui.add(explosions.emissiveStrength, "value", 1, 100, 1).name("emissiveStrength");
 
 // ______________________________ Character ______________________________//
 
