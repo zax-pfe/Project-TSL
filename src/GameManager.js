@@ -10,6 +10,16 @@ export default class GameManager extends EventEmitter {
   }
 
   fire = () => {
-    this.trigger("fire", [this.laserToFire]);
+    // this.trigger("fire", [this.laserToFire]);
+
+    window.dispatchEvent(
+      new CustomEvent("game:fire", {
+        detail: { id: [this.laserToFire] },
+      }),
+    );
+  };
+
+  hit = () => {
+    window.dispatchEvent(new CustomEvent("game:hit", {}));
   };
 }

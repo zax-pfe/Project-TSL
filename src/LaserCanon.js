@@ -17,21 +17,25 @@ import {
   max,
   sin,
   PI,
+  normalMap,
 } from "three/tsl";
 import gsap from "gsap";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import EventEmitter from "./Utils/EventEmitter.js";
 
 export default class LaserCanon extends EventEmitter {
   constructor(
     id,
-    stateMachine,
     position = new THREE.Vector3(0, 1, 0),
     rotation = new THREE.Euler(0, 0, 0),
     simplexTexture,
     emissiveColorA = color(0x1111ff),
     emissiveColorB = color(0xff1111),
     emissiveStrength = float(20),
+    texture,
+    normal,
   ) {
     console.log("LaserCanon constructor");
     super();
@@ -49,14 +53,19 @@ export default class LaserCanon extends EventEmitter {
 
     // _______________ Laser Canon Settings _______________//
     this.id = id;
-    this.stateMachine = stateMachine;
     this.position = position;
     this.rotation = rotation;
 
-    this.group = new THREE.Group();
+    this.texture = texture;
+    this.normal = normal;
 
+    this.group = new THREE.Group();
+    this.setLoader();
+    this.loadModel();
+
+    this.tiling = vec2(3, 3);
     this.setCanonGeometry();
-    this.setCanonMaterial();
+
     this.setCanonMesh();
 
     this.setLaserGeometry();
@@ -84,11 +93,38 @@ export default class LaserCanon extends EventEmitter {
 
     this.active = false;
 
-    this.stateMachine.on("fire", (id) => {
-      if (id.includes(this.id)) {
+    window.addEventListener("game:fire", (event) => {
+      // console.log("La partie commence !");
+      console.log(event.detail.id[0]);
+      if (event.detail.id[0].includes(this.id)) {
         this.fireLaser();
       }
     });
+  }
+
+  setLoader() {
+    this.loaders = {};
+    this.DRACOLoader = new DRACOLoader();
+    this.DRACOLoader.setDecoderPath("draco/");
+    this.loaders.gltfLoader = new GLTFLoader();
+    this.loaders.gltfLoader.setDRACOLoader(this.DRACOLoader);
+    this.loaders.textureLoader = new THREE.TextureLoader();
+    this.loaders.cubeTextureLoader = new THREE.CubeTextureLoader();
+  }
+
+  loadModel() {
+    this.loaders.gltfLoader.load(
+      "./3D/turret2.glb",
+      (gltf) => {
+        this.model = gltf.scene;
+        // this.model.rotation.y = -Math.PI * 0.58;
+        this.model.position.y = -0.07;
+        this.setCanonMaterial();
+        this.group.add(this.model);
+      },
+      undefined,
+      (error) => console.error("Impossible de charger character.glb :", error),
+    );
   }
 
   fireLaser() {
@@ -157,9 +193,13 @@ export default class LaserCanon extends EventEmitter {
   }
 
   setCanonMaterial() {
-    this.canonMaterial = new THREE.MeshStandardNodeMaterial({
-      color: 0xff0000, //red
-    });
+    const coords = uv().mul(this.tiling);
+
+    const mesh = this.model.getObjectByName("group2145190503");
+
+    this.canonMaterial = new THREE.MeshStandardNodeMaterial();
+
+    mesh.material = this.canonMaterial;
 
     const progress = this.progressCanon;
 
@@ -172,13 +212,19 @@ export default class LaserCanon extends EventEmitter {
 
       return positionLocal;
     })();
+
+    this.canonMaterial.colorNode = Fn(() => {
+      return texture(this.texture, coords);
+    })();
+
+    this.canonMaterial.normalNode = normalMap(texture(this.normal, coords));
   }
 
   setCanonMesh() {
     this.canonMesh = new THREE.Mesh(this.canonGeometry, this.canonMaterial);
     // this.canonMesh.position.copy(this.position);
     // this.canonMesh.rotation.copy(this.rotation);
-    this.group.add(this.canonMesh);
+    // this.group.add(this.canonMesh);
     // this.mesh.castShadow = true;
     // this.mesh.receiveShadow = true;
     // this.mesh.rotation.x = -Math.PI * 0.5;

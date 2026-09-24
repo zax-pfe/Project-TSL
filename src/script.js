@@ -149,6 +149,7 @@ gameManager.setLaserToFire([0, 3, 6]);
 
 const gameManagerGui = renderer.inspector.createParameters("gameManager").close();
 gameManagerGui.add(gameManager, "fire").name("Fire");
+gameManagerGui.add(gameManager, "hit").name("hit");
 
 // ______________________________ Explosions ______________________________//
 
@@ -173,28 +174,64 @@ gameManagerGui.add(gameManager, "fire").name("Fire");
 
 // ______________________________ Floor ______________________________//
 
-const ground = new Ground();
-scene.add(ground.mesh);
+// function load(file, colorSpace) {
+//   const map = textureLoader.load(`/textures/ground/${file}`);
 
-// {
-//   const texture = textureLoader.load("./floor-color.jpg");
-//   texture.colorSpace = THREE.SRGBColorSpace;
-//   const mesh = new THREE.Mesh(
-//     new THREE.PlaneGeometry(10, 10),
-//     new THREE.MeshStandardNodeMaterial({ map: texture, transparent: true }),
-//   );
-//   mesh.material.opacityNode = uv().sub(0.5).length().smoothstep(0.5, 0.2);
-//   mesh.rotation.x = -Math.PI * 0.5;
-//   mesh.receiveShadow = true;
-//   mesh.renderOrder = -1;
-//   scene.add(mesh);
+//   map.wrapS = THREE.RepeatWrapping;
+//   map.wrapT = THREE.RepeatWrapping;
+//   map.anisotropy = 8;
+//   if (colorSpace) map.colorSpace = colorSpace;
+
+//   return map;
 // }
+
+// const diffuse = load("metal_plate_diff_1k.jpg", THREE.SRGBColorSpace);
+
+// const normal = load("Vol_18_2_Normal.png");
+
+// const ground = new Ground(diffuse, normal);
+// scene.add(ground.mesh);
+
+{
+  // const texture = textureLoader.load("./textureColor.png");
+
+  // const texture = textureLoader.load("./floor-color.jpg");
+  const texture = await textureLoader.loadAsync("./textureColor.png");
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const normal = await textureLoader.loadAsync("./Vol_18_2_Normal.png");
+  normal.wrapS = THREE.RepeatWrapping;
+  normal.wrapT = THREE.RepeatWrapping;
+
+  const ground = new Ground(texture, normal);
+  scene.add(ground.mesh);
+
+  // const texture = textureLoader.load("./floor-color.jpg");
+  // const mesh = new THREE.Mesh(
+  //   new THREE.PlaneGeometry(10, 10),
+  //   new THREE.MeshStandardNodeMaterial({ map: texture, transparent: true }),
+  // );
+  // mesh.material.opacityNode = uv().sub(0.5).length().smoothstep(0.5, 0.2);
+  // mesh.rotation.x = -Math.PI * 0.5;
+  // mesh.receiveShadow = true;
+  // mesh.renderOrder = -1;
+  // scene.add(mesh);
+}
 
 // ______________________________ Laser ______________________________//
 
 const simplexTexture = await textureLoader.loadAsync("./simplex-tiling-noise-256x256.png");
 simplexTexture.wrapS = THREE.RepeatWrapping;
 simplexTexture.wrapT = THREE.RepeatWrapping;
+
+const texture = await textureLoader.loadAsync("./textureColor.png");
+texture.wrapS = THREE.RepeatWrapping;
+texture.wrapT = THREE.RepeatWrapping;
+texture.colorSpace = THREE.SRGBColorSpace;
+const normal = await textureLoader.loadAsync("./Vol_18_2_Normal.png");
+normal.wrapS = THREE.RepeatWrapping;
+normal.wrapT = THREE.RepeatWrapping;
 
 // const perlinTexture = await textureLoader.loadAsync("./perlin.jpg");
 // perlinTexture.wrapS = THREE.RepeatWrapping;
@@ -203,13 +240,14 @@ simplexTexture.wrapT = THREE.RepeatWrapping;
 function createLaserCanon(id, position, rotation, withControl = true) {
   const laser_canon = new LaserCanon(
     id,
-    gameManager,
     position,
     rotation,
     simplexTexture,
     uniform(color(0x1111ff)),
     uniform(color(0xff1111)),
     uniform(float(30)),
+    texture,
+    normal,
   );
 
   scene.add(laser_canon.group);
@@ -248,7 +286,7 @@ createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, -4), rotatation_lase
 
 // ______________________________ Character ______________________________//
 
-const character = new Character();
+const character = new Character(simplexTexture);
 scene.add(character.mesh);
 
 /**

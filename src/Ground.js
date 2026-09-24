@@ -15,11 +15,19 @@ import {
   min,
   uniform,
   max,
+  normalMap,
+  normalWorldGeometry,
 } from "three/tsl";
 
 export default class Ground {
-  constructor() {
+  constructor(diffuse, normal) {
     console.log("Ground constructor");
+
+    this.diffuse = diffuse;
+    this.normal = normal;
+
+    this.tiling = vec2(2, 2);
+    this.sideBrightness = uniform(0.05);
 
     this.setGeometry();
     this.setMaterial();
@@ -32,11 +40,21 @@ export default class Ground {
   }
 
   setMaterial() {
+    const coords = uv().mul(this.tiling);
     this.material = new THREE.MeshStandardNodeMaterial({
-      color: 0x111fff,
       side: THREE.DoubleSide,
+      // map: this.diffuse,
     });
 
+    this.material.colorNode = Fn(() => {
+      const baseColor = texture(this.diffuse, coords).rgb;
+      // La normale geometrique reste independante de la normal map.
+      const upward = normalWorldGeometry.y.clamp(0, 1);
+      const brightness = mix(this.sideBrightness, float(1), upward);
+      return baseColor.mul(brightness);
+    })();
+
+    this.material.normalNode = normalMap(texture(this.normal, coords));
     this.material.opacityNode = uv().sub(0.5).length().smoothstep(0.5, 0.2);
   }
 
