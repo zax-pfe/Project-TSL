@@ -1,9 +1,12 @@
 import * as THREE from "three/webgpu";
+import gsap from "gsap";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Inspector } from "three/addons/inspector/Inspector.js";
 import { SkyMesh } from "three/addons/objects/SkyMesh.js";
 import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
-import { pass, uv, color, float, uniform } from "three/tsl";
+import { chromaticAberration } from "three/addons/tsl/display/ChromaticAberrationNode.js";
+
+import { pass, uv, color, float, uniform, vec2, time, sin, convertToTexture } from "three/tsl";
 import Explosions from "./Explosions.js";
 import Ground from "./Ground.js";
 import LaserCanon from "./LaserCanon.js";
@@ -91,11 +94,58 @@ const bloomPass = bloom(scenePassColor);
 bloomPass.threshold.value = 0;
 bloomPass.strength.value = 0.05;
 
-renderPipeline.outputNode = scenePassColor.add(bloomPass);
+const chromaticStrength = uniform(0);
+const chromaticPass = chromaticAberration(
+  scenePassColor.add(bloomPass),
+  chromaticStrength,
+  vec2(0.5, 0.5),
+);
+
+const shakeStrength = uniform(0.0);
+const shakeSpeed = uniform(1);
+const shakeTime = time.mul(shakeSpeed);
+const shakeOffset = vec2(
+  sin(shakeTime.mul(43))
+    .add(sin(shakeTime.mul(71)))
+    .mul(0.5),
+  sin(shakeTime.mul(53))
+    .add(sin(shakeTime.mul(89)))
+    .mul(0.5),
+).mul(shakeStrength);
+// Recadrer legerement pour garder les bords dans l'image pendant le shake.
+const shakeUv = uv()
+  .sub(0.5)
+  .mul(float(1).sub(shakeStrength.mul(2)))
+  .add(0.5)
+  .add(shakeOffset);
+renderPipeline.outputNode = convertToTexture(chromaticPass).sample(shakeUv);
 
 const bloomGui = renderer.inspector.createParameters("Bloom").close();
 bloomGui.add(bloomPass.threshold, "value", 0, 2, 0.01).name("threshold");
 bloomGui.add(bloomPass.strength, "value", 0, 2, 0.01).name("strength");
+
+const chromaticGui = renderer.inspector.createParameters("Chromatic aberration").close();
+chromaticGui.add(chromaticStrength, "value", 0, 1, 0.01).name("strength");
+
+const shakeGui = renderer.inspector.createParameters("Screen shake").close();
+shakeGui.add(shakeStrength, "value", 0, 0.01, 0.0001).name("strength");
+shakeGui.add(shakeSpeed, "value", 0.1, 3, 0.1).name("speed");
+
+const laserEffects = { progress: 0 };
+
+window.addEventListener("game:laser", () => {
+  gsap.to(laserEffects, {
+    progress: 1,
+    duration: 1,
+    repeat: 1,
+    yoyo: true,
+    ease: "power1.inOut",
+    onUpdate: () => {
+      shakeStrength.value = laserEffects.progress * 0.003;
+      chromaticStrength.value = laserEffects.progress;
+    },
+  });
+});
 
 // ______________________________ Movements Input ______________________________//
 let movement;

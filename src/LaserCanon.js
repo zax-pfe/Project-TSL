@@ -156,6 +156,8 @@ export default class LaserCanon extends EventEmitter {
       onComplete: () => {
         console.log("anim finished");
 
+        window.dispatchEvent(new CustomEvent("game:laser", {}));
+
         this.progressLight.value = 0;
 
         gsap.to(dummy, {
