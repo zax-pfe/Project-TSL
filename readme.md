@@ -1,4 +1,4 @@
-# Three.js Journey
+# Project TSL Gobelins
 
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
