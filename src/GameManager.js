@@ -23,7 +23,7 @@ export default class GameManager extends EventEmitter {
 
     window.addEventListener("game:start", (event) => {
       this.active = true;
-      this.fire();
+      this.delayEvent(2, this.fire);
     });
 
     window.addEventListener("game:stop", (event) => {

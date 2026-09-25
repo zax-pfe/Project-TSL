@@ -205,12 +205,12 @@ window.addEventListener("game:laser", () => {
 });
 
 window.addEventListener("game:hit", () => {
-  gsap.to(hitGrayscale, {
-    value: 1,
-    duration: 1,
-    ease: "power1.inOut",
-    overwrite: true,
-  });
+  // gsap.to(hitGrayscale, {
+  //   value: 1,
+  //   duration: 1,
+  //   ease: "power1.inOut",
+  //   overwrite: true,
+  // });
 });
 
 const restoreColors = () => {
