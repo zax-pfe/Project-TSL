@@ -265,14 +265,6 @@ const gizmo = control.getHelper();
 gizmo.userData.ignoreLaserRaycast = true;
 scene.add(gizmo);
 
-// ______________________________ Text ______________________________//
-
-const textManager = new Text();
-textManager.mesh.position.set(4, 4, 4);
-textManager.mesh.rotation.y = Math.PI * 0.25;
-
-scene.add(textManager.mesh);
-
 // ______________________________ Sound ______________________________//
 
 const soundManger = new SoundManager();
@@ -375,6 +367,14 @@ createLaserCanon(11, new THREE.Vector3(x_laser_2, y_laser_2, -1.5), rotatation_l
 createLaserCanon(12, new THREE.Vector3(x_laser_2, y_laser_2, -3), rotatation_laser_2, false);
 createLaserCanon(13, new THREE.Vector3(x_laser_2, y_laser_2, -4.5), rotatation_laser_2, false);
 
+// ______________________________ Text ______________________________//
+
+const textManager = new Text(simplexTexture);
+textManager.mesh.position.set(4, 4, 4);
+textManager.mesh.rotation.y = Math.PI * 0.25;
+
+scene.add(textManager.mesh);
+
 // ______________________________ Character ______________________________//
 
 const character = new Character(simplexTexture);
@@ -431,29 +431,37 @@ const tick = (currentTime) => {
 renderer.setAnimationLoop(tick);
 
 // ______________________________ Game buttons ______________________________//
-const startButton = document.querySelector(".startButton");
-const restartButton = document.querySelector(".restartButton");
+const textRaycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 
-const hideGameButtons = () => {
-  startButton.disabled = true;
-  restartButton.disabled = true;
+const getTextUnderPointer = (event) => {
+  const text = textManager.activeText;
+  if (!text?.visible) return null;
+  if (!textManager.startButtonEnabled && !textManager.restartButtonEnabled) return null;
+
+  const bounds = canvas.getBoundingClientRect();
+  pointer.set(
+    ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+    -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
+  );
+  camera.updateMatrixWorld();
+  text.updateWorldMatrix(true, false);
+  textRaycaster.setFromCamera(pointer, camera);
+  return textRaycaster.intersectObject(text, false).length > 0 ? text : null;
 };
 
-startButton.addEventListener("click", () => {
-  if (startButton.disabled) return;
-  hideGameButtons();
-  stateMachine.start();
+canvas.addEventListener("pointermove", (event) => {
+  canvas.style.cursor = getTextUnderPointer(event) ? "pointer" : "default";
+});
+canvas.addEventListener("pointerleave", () => {
+  canvas.style.cursor = "default";
 });
 
-restartButton.addEventListener("click", () => {
-  if (restartButton.disabled) return;
-  hideGameButtons();
-  stateMachine.restart();
-});
-
-window.addEventListener("game:start", hideGameButtons);
-window.addEventListener("game:restart", hideGameButtons);
-window.addEventListener("game:stop", () => {
-  startButton.disabled = true;
-  restartButton.disabled = false;
+canvas.addEventListener("click", (event) => {
+  if (event.button !== 0) return;
+  const text = getTextUnderPointer(event);
+  if (!text) return;
+  canvas.style.cursor = "default";
+  if (text === textManager.startText) stateMachine.start();
+  else if (text === textManager.restartText) stateMachine.restart();
 });
