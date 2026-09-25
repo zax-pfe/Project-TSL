@@ -29,18 +29,22 @@ export default class Character {
     console.log("Character constructor");
     this.simplexTexture = simplexTexture;
 
-    this.speed = 3; // Unites par seconde.
+    this.speed = 3;
     this.rotationSpeed = 12;
-    this.animationBlendDuration = 0.2; // Secondes pour passer de idle a run.
+    this.animationBlendDuration = 0.2;
     this.runWeight = 0;
     this.actions = {};
     this.translation = new THREE.Vector3();
+
+    this.isidle = true;
+    this.isWalking = false;
 
     this.progress = uniform(0);
 
     this.setMesh();
     this.setLoader();
     this.loadModel();
+    this.setBoundingBox();
 
     window.addEventListener("game:hit", (event) => {
       this.characterHit();
@@ -57,6 +61,20 @@ export default class Character {
     this.loaders.cubeTextureLoader = new THREE.CubeTextureLoader();
   }
 
+  setBoundingBox() {
+    this.BoundingBoxGeometry = new THREE.SphereGeometry(2, 32, 32);
+    this.BoundingBoxMaterial = new THREE.MeshBasicNodeMaterial({
+      color: 0xff1111,
+      transparent: true,
+      opacity: 0.1,
+      // Le volume de collision ne doit pas masquer le personnage transparent.
+      depthWrite: false,
+    });
+    this.BoundingBoxMesh = new THREE.Mesh(this.BoundingBoxGeometry, this.BoundingBoxMaterial);
+    this.BoundingBoxMesh.position.y = 1;
+    this.mesh.add(this.BoundingBoxMesh);
+  }
+
   setMesh() {
     // Le groupe reste dans la scene pendant le chargement du modele.
     this.mesh = new THREE.Group();
@@ -69,7 +87,10 @@ export default class Character {
       "./3D/character.glb",
       (gltf) => {
         this.model = gltf.scene;
-        this.model.scale.set(1.3, 1.2, 1.3);
+        this.model.scale.set(1, 1, 1);
+        this.model.traverse((child) => {
+          if (child.isMesh) child.castShadow = true;
+        });
         this.setMaterial();
 
         this.mesh.add(this.model);
@@ -108,7 +129,9 @@ export default class Character {
     })();
 
     this.bodyMaterial.colorNode = Fn(() => {
-      return mix(materialColor.rgb, color(0x000000), progress.mul(2));
+      const darkerColor = mix(materialColor.rgb, color(0x000000), 0.7);
+
+      return mix(darkerColor.rgb, color(0x000000), progress.mul(2));
     })();
   }
 
@@ -155,6 +178,21 @@ export default class Character {
       // Prendre le chemin le plus court, meme autour de -PI / PI.
       const shortestAngle = Math.atan2(Math.sin(angleDifference), Math.cos(angleDifference));
       this.mesh.rotation.y += shortestAngle * (1 - Math.exp(-this.rotationSpeed * deltaTime));
+
+      if (this.isidle) {
+        console.log("was idle");
+        this.isidle = false;
+        this.isWalking = true;
+
+        window.dispatchEvent(new CustomEvent("game:walking", {}));
+      }
+    } else {
+      if (this.isWalking) {
+        console.log("was walking");
+        this.isWalking = false;
+        this.isidle = true;
+        window.dispatchEvent(new CustomEvent("game:stopWalking", {}));
+      }
     }
 
     if (this.actions.idle && this.actions.run) {

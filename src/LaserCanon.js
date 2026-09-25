@@ -12,6 +12,7 @@ import {
   smoothstep,
   frontFacing,
   positionLocal,
+  positionGeometry,
   min,
   uniform,
   max,
@@ -33,6 +34,7 @@ export default class LaserCanon extends EventEmitter {
     simplexTexture,
     emissiveColorA = color(0x1111ff),
     emissiveColorB = color(0xff1111),
+
     emissiveStrength = float(20),
     texture,
     normal,
@@ -45,11 +47,14 @@ export default class LaserCanon extends EventEmitter {
     this.simplexTexture = simplexTexture;
     this.emissiveColorA = emissiveColorA;
     this.emissiveColorB = emissiveColorB;
+    this.emissiveColorC = color(0xff8811);
+
     this.emissiveStrength = emissiveStrength;
 
     this.progressCanon = uniform(0);
     this.progressLight = uniform(0);
     this.progressLaser = uniform(0);
+    this.progresCanonHeat = uniform(0);
 
     // _______________ Laser Canon Settings _______________//
     this.id = id;
@@ -119,6 +124,10 @@ export default class LaserCanon extends EventEmitter {
         this.model = gltf.scene;
         // this.model.rotation.y = -Math.PI * 0.58;
         this.model.position.y = -0.07;
+
+        this.model.traverse((child) => {
+          if (child.isMesh) child.castShadow = true;
+        });
         this.setCanonMaterial();
         this.group.add(this.model);
       },
@@ -132,19 +141,19 @@ export default class LaserCanon extends EventEmitter {
     // puis le rayon va grossir d'un coup et l'anim va se jouer
     console.log("fire event received in LaserCanon", this.id);
 
-    const dummy = { progressLight: 0, porgressLaser: 0, progressCanon: 0 };
+    const dummy = { progressLight: 0, porgressLaser: 0, progressCanon: 0, progresCanonHeat: 0 };
 
-    // gsap.to(dummy, {
-    //   porgressLaser: 1,
-    //   duration: 2,
-    //   ease: "linear",
-    //   onUpdate: () => {
-    //     this.progressLaser.value = dummy.porgressLaser;
-    //   },
-    //   onComplete: () => {
-    //     console.log("anim finished");
-    //   },
-    // });
+    gsap.to(dummy, {
+      progresCanonHeat: 1,
+      duration: 4,
+      ease: "power1.out",
+      onUpdate: () => {
+        this.progresCanonHeat.value = dummy.progresCanonHeat;
+      },
+      onComplete: () => {
+        console.log("anim finished");
+      },
+    });
 
     gsap.to(dummy, {
       progressLight: 1,
@@ -156,6 +165,7 @@ export default class LaserCanon extends EventEmitter {
       onComplete: () => {
         console.log("anim finished");
 
+        this.active = true;
         window.dispatchEvent(new CustomEvent("game:laser", {}));
 
         this.progressLight.value = 0;
@@ -168,6 +178,7 @@ export default class LaserCanon extends EventEmitter {
             this.progressLaser.value = dummy.porgressLaser;
           },
           onComplete: () => {
+            this.active = false;
             window.dispatchEvent(
               new CustomEvent("game:endFire", {
                 detail: { id: this.id },
@@ -208,6 +219,7 @@ export default class LaserCanon extends EventEmitter {
     mesh.material = this.canonMaterial;
 
     const progress = this.progressCanon;
+    const progressCanonHeat = this.progresCanonHeat;
 
     this.canonMaterial.positionNode = Fn(() => {
       const size_y = sin(progress.mul(PI)).mul(0.2).add(1);
@@ -220,7 +232,27 @@ export default class LaserCanon extends EventEmitter {
     })();
 
     this.canonMaterial.colorNode = Fn(() => {
-      return texture(this.texture, coords);
+      const coords = uv();
+      const textureColor = texture(this.texture, coords);
+
+      const width = positionGeometry.x.add(0.2);
+      const ratio = smoothstep(0.35, 0.9, width).mul(sin(progressCanonHeat.mul(PI)));
+      const canonLight = mix(textureColor, this.emissiveColorB, ratio);
+
+      return canonLight;
+    })();
+
+    this.canonMaterial.emissiveNode = Fn(() => {
+      const coords = uv();
+      const textureColor = texture(this.texture, coords);
+
+      const width = positionGeometry.x.add(0.2);
+      const ratio = smoothstep(0.35, 0.9, width).mul(sin(progressCanonHeat.mul(PI)));
+
+      const emissiveColor = mix(this.emissiveColorC, this.emissiveColorB, ratio.mul(3));
+
+      const ratioStrenght = ratio.mul(1);
+      return emissiveColor.mul(ratioStrenght);
     })();
 
     this.canonMaterial.normalNode = normalMap(texture(this.normal, coords));
@@ -310,16 +342,16 @@ export default class LaserCanon extends EventEmitter {
     });
 
     this.lightMaterial.maskNode = Fn(() => {
-      const noise1Uv = uv().mul(vec2(1, 5));
+      const noise1Uv = uv().mul(vec2(1, 15));
 
       const noise1 = texture(this.simplexTexture, noise1Uv).r;
 
-      const noise2Uv = uv().mul(vec2(1, 5));
+      const noise2Uv = uv().mul(vec2(1, 15));
       const noise2 = texture(this.simplexTexture, noise2Uv).g;
 
       const finalNoise = noise1.add(noise2).div(2).pow(2);
 
-      const lightProgress = progress.mul(0.7);
+      const lightProgress = progress.mul(0.3);
 
       return finalNoise.sub(lightProgress).greaterThan(0).oneMinus();
 

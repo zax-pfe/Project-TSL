@@ -6,13 +6,16 @@ export default class GameManager extends EventEmitter {
     console.log("GameManager");
     this.level = 0;
     this.pendingLasers = new Set();
+    this.delayRounds = 1;
 
     window.addEventListener("game:endFire", (event) => {
       if (!this.pendingLasers.delete(event.detail?.id)) return;
       if (this.pendingLasers.size > 0) return;
 
       this.level++;
-      this.fire();
+      this.delayRounds -= 0.1;
+      this.delayEvent(this.delayRounds, this.fire);
+      // this.fire();
     });
   }
   setLaserToFire(CanonLaserId) {
@@ -36,6 +39,11 @@ export default class GameManager extends EventEmitter {
       this.laserToFire.push(id);
       groupCounts[group]++;
     }
+  }
+
+  // duration en secondes. Retourne l'identifiant pour permettre clearTimeout(id).
+  delayEvent(duration, callBack) {
+    return setTimeout(callBack, duration * 1000);
   }
 
   fire = () => {

@@ -5,8 +5,21 @@ import { Inspector } from "three/addons/inspector/Inspector.js";
 import { SkyMesh } from "three/addons/objects/SkyMesh.js";
 import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
 import { chromaticAberration } from "three/addons/tsl/display/ChromaticAberrationNode.js";
+import { film } from "three/addons/tsl/display/FilmNode.js";
 
-import { pass, uv, color, float, uniform, vec2, time, sin, convertToTexture } from "three/tsl";
+import {
+  pass,
+  uv,
+  color,
+  float,
+  uniform,
+  vec2,
+  vec3,
+  vec4,
+  time,
+  sin,
+  convertToTexture,
+} from "three/tsl";
 import Explosions from "./Explosions.js";
 import Ground from "./Ground.js";
 import LaserCanon from "./LaserCanon.js";
@@ -15,6 +28,7 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import StateMachine from "./StateMachine.js";
 import GameManager from "./GameManager.js";
 import SoundManager from "./SoundManager.js";
+import RaycasterManager from "./RaycasterManager.js";
 
 // idée sol reaction au pas de l'utilisateur
 // trainée/neige
@@ -27,6 +41,7 @@ const canvas = document.querySelector("canvas.threejs");
 
 // Scene
 const scene = new THREE.Scene();
+const raycasterManager = new RaycasterManager(scene);
 
 // Loaders
 const textureLoader = new THREE.TextureLoader();
@@ -58,16 +73,17 @@ window.addEventListener("resize", () => {
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 100);
-camera.position.x = 7;
-camera.position.y = 2.5;
-camera.position.z = 7;
+camera.position.x = 12;
+camera.position.y = 9;
+camera.position.z = 11.5;
+
 scene.add(camera);
 
 // Controls
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0, 0);
-controls.enableDamping = true;
-controls.enabled = true;
+controls.enableDamping = false;
+controls.enabled = false;
 
 /**
  * Renderer
@@ -85,12 +101,12 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x111111);
 renderer.inspector = new Inspector();
 
-/**
- * Post processing
- */
+// ______________________________ POST PROCESSING ______________________________//
+
 const renderPipeline = new THREE.RenderPipeline(renderer);
 const scenePass = pass(scene, camera);
 const scenePassColor = scenePass.getTextureNode("output");
+
 const bloomPass = bloom(scenePassColor);
 bloomPass.threshold.value = 0;
 bloomPass.strength.value = 0.05;
@@ -119,11 +135,24 @@ const shakeUv = uv()
   .mul(float(1).sub(shakeStrength.mul(2)))
   .add(0.5)
   .add(shakeOffset);
-renderPipeline.outputNode = convertToTexture(chromaticPass).sample(shakeUv);
+const shakePass = convertToTexture(chromaticPass).sample(shakeUv);
+
+const filmEnabled = uniform(true);
+const filmIntensity = uniform(0.5);
+const filmGrayscale = uniform(false);
+const filmPass = film(shakePass, filmIntensity);
+const filmLuminance = filmPass.rgb.dot(vec3(0.3, 0.59, 0.11));
+const filmColor = filmGrayscale.select(vec4(vec3(filmLuminance), filmPass.a), filmPass);
+renderPipeline.outputNode = filmEnabled.select(filmColor, shakePass);
 
 const bloomGui = renderer.inspector.createParameters("Bloom").close();
 bloomGui.add(bloomPass.threshold, "value", 0, 2, 0.01).name("threshold");
 bloomGui.add(bloomPass.strength, "value", 0, 2, 0.01).name("strength");
+
+const filmGui = renderer.inspector.createParameters("Film").close();
+filmGui.add(filmEnabled, "value").name("enabled");
+filmGui.add(filmIntensity, "value", 0, 1, 0.01).name("intensity");
+filmGui.add(filmGrayscale, "value").name("grayscale");
 
 const chromaticGui = renderer.inspector.createParameters("Chromatic aberration").close();
 chromaticGui.add(chromaticStrength, "value", 0, 1, 0.01).name("strength");
@@ -186,6 +215,7 @@ control.addEventListener("dragging-changed", function (event) {
 });
 
 const gizmo = control.getHelper();
+gizmo.userData.ignoreLaserRaycast = true;
 scene.add(gizmo);
 
 // ______________________________ Sound ______________________________//
@@ -194,6 +224,9 @@ const soundManger = new SoundManager();
 // ______________________________ State Machine ______________________________//
 
 const stateMachine = new StateMachine();
+// const gameManagerGui = renderer.inspector.createParameters("gameManager").close();
+// gameManagerGui.add(gameManager, "fire").name("Fire");
+// stateMachine
 
 // game manager, recupere tout les event du jeux, conteni les
 
@@ -251,6 +284,7 @@ function createLaserCanon(id, position, rotation, withControl = true) {
   );
 
   scene.add(laser_canon.group);
+  raycasterManager.addLaser(laser_canon);
 
   if (withControl) {
     control.attach(laser_canon.group);
@@ -262,22 +296,26 @@ let y_laser_1 = 1;
 
 let rotatation_laser_1 = new THREE.Euler(0, 0, 0);
 
-createLaserCanon(0, new THREE.Vector3(4, y_laser_1, z_laser_1), rotatation_laser_1, false);
-createLaserCanon(1, new THREE.Vector3(2, y_laser_1, z_laser_1), rotatation_laser_1, false);
-createLaserCanon(2, new THREE.Vector3(0, y_laser_1, z_laser_1), rotatation_laser_1, false);
-createLaserCanon(3, new THREE.Vector3(-2, y_laser_1, z_laser_1), rotatation_laser_1, false);
-createLaserCanon(4, new THREE.Vector3(-4, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(0, new THREE.Vector3(4.5, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(1, new THREE.Vector3(3, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(2, new THREE.Vector3(1.5, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(3, new THREE.Vector3(0, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(4, new THREE.Vector3(-1.5, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(5, new THREE.Vector3(-3, y_laser_1, z_laser_1), rotatation_laser_1, false);
+createLaserCanon(6, new THREE.Vector3(-4.5, y_laser_1, z_laser_1), rotatation_laser_1, false);
 
 let y_laser_2 = 1;
 let x_laser_2 = -6;
 
 let rotatation_laser_2 = new THREE.Euler(0, Math.PI * 0.5, 0);
 
-createLaserCanon(5, new THREE.Vector3(x_laser_2, y_laser_2, 4), rotatation_laser_2, false);
-createLaserCanon(6, new THREE.Vector3(x_laser_2, y_laser_2, 2), rotatation_laser_2, false);
-createLaserCanon(7, new THREE.Vector3(x_laser_2, y_laser_2, 0), rotatation_laser_2, false);
-createLaserCanon(8, new THREE.Vector3(x_laser_2, y_laser_2, -2), rotatation_laser_2, false);
-createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, -4), rotatation_laser_2, false);
+createLaserCanon(7, new THREE.Vector3(x_laser_2, y_laser_2, 4.5), rotatation_laser_2, false);
+createLaserCanon(8, new THREE.Vector3(x_laser_2, y_laser_2, 3), rotatation_laser_2, false);
+createLaserCanon(9, new THREE.Vector3(x_laser_2, y_laser_2, 1.5), rotatation_laser_2, false);
+createLaserCanon(10, new THREE.Vector3(x_laser_2, y_laser_2, 0), rotatation_laser_2, false);
+createLaserCanon(11, new THREE.Vector3(x_laser_2, y_laser_2, -1.5), rotatation_laser_2, false);
+createLaserCanon(12, new THREE.Vector3(x_laser_2, y_laser_2, -3), rotatation_laser_2, false);
+createLaserCanon(13, new THREE.Vector3(x_laser_2, y_laser_2, -4.5), rotatation_laser_2, false);
 
 // ______________________________ Character ______________________________//
 
@@ -320,7 +358,11 @@ const tick = (currentTime) => {
   previousTime = currentTime;
   // Mettre à jour la caméra (notamment son amortissement).
   controls.update();
+
+  // console.log(camera.position);
+
   character.animate(movement, deltaTime);
+  raycasterManager.update();
 
   // Dessiner la scène et le gizmo avec le post-traitement.
   // TransformControls modifie l'objet directement via les événements souris.
