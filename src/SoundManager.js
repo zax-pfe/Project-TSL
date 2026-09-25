@@ -19,9 +19,9 @@ export default class SoundManager {
       volume: 0.1,
       rate: 1.7,
     });
-    this.loopVolume = 0.2;
+    this.loopVolume = 0.4;
     this.soundLoop = new Howl({
-      src: ["./Sounds/soundLoop.wav"],
+      src: ["./Sounds/soundLoop.mp3"],
       loop: true,
       volume: this.loopVolume,
     });
