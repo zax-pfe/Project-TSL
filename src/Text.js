@@ -47,8 +47,9 @@ export default class Text {
     window.addEventListener("game:restart", () => this.textHide());
     window.addEventListener("game:stop", () => this.textAppear());
 
-    this.emissiveColorA = color(0x1111ff);
-    this.emissiveColorB = color(0xff1111);
+    // this.emissiveColorA = color(0x1111ff);
+    this.emissiveColorA = color(0xff1111);
+    this.emissiveColorB = color(0x000000);
 
     this.loadText();
   }
@@ -107,14 +108,14 @@ export default class Text {
 
     const progress = this.progress;
 
-    this.material.emissiveNode = Fn(() => {
-      const emissiveMix = progress.smoothstep(0, 0.7);
+    // this.material.emissiveNode = Fn(() => {
+    //   const emissiveMix = progress.smoothstep(0, 0.7);
 
-      const emissiveColor = mix(this.emissiveColorA, this.emissiveColorB, emissiveMix);
+    //   const emissiveColor = mix(this.emissiveColorA, this.emissiveColorB, emissiveMix);
 
-      const emissiveStrength = float(1);
-      return emissiveColor.mul(emissiveStrength);
-    })();
+    //   const emissiveStrength = float(1);
+    //   return emissiveColor.mul(emissiveStrength);
+    // })();
 
     this.material.maskNode = Fn(() => {
       const noise1Uv = uv().mul(vec2(0.3, 0.3));
@@ -129,7 +130,9 @@ export default class Text {
     })();
 
     this.material.colorNode = Fn(() => {
-      return vec3(1, 0, 0);
+      const color = mix(this.emissiveColorA, this.emissiveColorB, this.progress.mul(2));
+      // return vec3(1, 0, 0);
+      return color;
     })();
   }
 
