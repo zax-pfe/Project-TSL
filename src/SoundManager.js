@@ -19,10 +19,11 @@ export default class SoundManager {
       volume: 0.1,
       rate: 1.7,
     });
+    this.loopVolume = 0.2;
     this.soundLoop = new Howl({
       src: ["./Sounds/soundLoop.wav"],
       loop: true,
-      volume: 0.2,
+      volume: this.loopVolume,
     });
 
     this.soundLoop.play();
@@ -54,6 +55,7 @@ export default class SoundManager {
 
     window.addEventListener("game:hit", () => {
       this.soundBurn.play();
+      this.soundLoop.fade(this.loopVolume, 0, 1);
     });
 
     window.addEventListener("game:walking", () => {
@@ -75,6 +77,7 @@ export default class SoundManager {
 
     window.addEventListener("game:restart", () => {
       this.regenerate.play();
+      this.soundLoop.fade(0, this.loopVolume, 1);
     });
   }
 }
