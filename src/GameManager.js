@@ -8,14 +8,31 @@ export default class GameManager extends EventEmitter {
     this.pendingLasers = new Set();
     this.delayRounds = 1;
 
+    this.active = false;
+
     window.addEventListener("game:endFire", (event) => {
       if (!this.pendingLasers.delete(event.detail?.id)) return;
       if (this.pendingLasers.size > 0) return;
 
+      if (!this.active) return;
       this.level++;
       this.delayRounds -= 0.1;
       this.delayEvent(this.delayRounds, this.fire);
       // this.fire();
+    });
+
+    window.addEventListener("game:start", (event) => {
+      this.active = true;
+      this.fire();
+    });
+
+    window.addEventListener("game:stop", (event) => {
+      this.active = false;
+    });
+
+    window.addEventListener("game:restart", (event) => {
+      this.active = true;
+      this.delayEvent(2, this.fire);
     });
   }
   setLaserToFire(CanonLaserId) {

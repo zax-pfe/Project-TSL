@@ -12,6 +12,7 @@ import {
   uv,
   color,
   float,
+  mix,
   uniform,
   vec2,
   vec3,
@@ -29,6 +30,7 @@ import StateMachine from "./StateMachine.js";
 import GameManager from "./GameManager.js";
 import SoundManager from "./SoundManager.js";
 import RaycasterManager from "./RaycasterManager.js";
+import Text from "./Text.js";
 
 // idée sol reaction au pas de l'utilisateur
 // trainée/neige
@@ -143,7 +145,26 @@ const filmGrayscale = uniform(false);
 const filmPass = film(shakePass, filmIntensity);
 const filmLuminance = filmPass.rgb.dot(vec3(0.3, 0.59, 0.11));
 const filmColor = filmGrayscale.select(vec4(vec3(filmLuminance), filmPass.a), filmPass);
-renderPipeline.outputNode = filmEnabled.select(filmColor, shakePass);
+const postColor = filmEnabled.select(filmColor, shakePass);
+const hitGrayscale = uniform(0);
+const hitLuminance = postColor.rgb.dot(vec3(0.2126, 0.7152, 0.0722));
+const hitColor = vec4(mix(postColor.rgb, vec3(hitLuminance), hitGrayscale), postColor.a);
+
+const vignetteEnabled = uniform(true);
+const vignetteIntensity = uniform(0.55);
+const vignetteRadius = uniform(0.35);
+const vignetteSoftness = uniform(0.45);
+// Distance normalisee : 0 au centre, 1 dans les coins de l'ecran.
+const vignetteDistance = uv().sub(0.5).length().mul(Math.SQRT2);
+const vignetteMask = vignetteDistance.smoothstep(
+  vignetteRadius,
+  vignetteRadius.add(vignetteSoftness),
+);
+const vignetteColor = vec4(
+  hitColor.rgb.mul(float(1).sub(vignetteMask.mul(vignetteIntensity))),
+  hitColor.a,
+);
+renderPipeline.outputNode = vignetteEnabled.select(vignetteColor, hitColor);
 
 const bloomGui = renderer.inspector.createParameters("Bloom").close();
 bloomGui.add(bloomPass.threshold, "value", 0, 2, 0.01).name("threshold");
@@ -154,6 +175,12 @@ filmGui.add(filmEnabled, "value").name("enabled");
 filmGui.add(filmIntensity, "value", 0, 1, 0.01).name("intensity");
 filmGui.add(filmGrayscale, "value").name("grayscale");
 
+const vignetteGui = renderer.inspector.createParameters("Vignette").close();
+vignetteGui.add(vignetteEnabled, "value").name("enabled");
+vignetteGui.add(vignetteIntensity, "value", 0, 1, 0.01).name("intensity");
+vignetteGui.add(vignetteRadius, "value", 0, 1, 0.01).name("radius");
+vignetteGui.add(vignetteSoftness, "value", 0.01, 1, 0.01).name("softness");
+
 const chromaticGui = renderer.inspector.createParameters("Chromatic aberration").close();
 chromaticGui.add(chromaticStrength, "value", 0, 1, 0.01).name("strength");
 
@@ -161,21 +188,41 @@ const shakeGui = renderer.inspector.createParameters("Screen shake").close();
 shakeGui.add(shakeStrength, "value", 0, 0.01, 0.0001).name("strength");
 shakeGui.add(shakeSpeed, "value", 0.1, 3, 0.1).name("speed");
 
-const laserEffects = { progress: 0 };
+const postProcessEffect = { progress: 0 };
 
 window.addEventListener("game:laser", () => {
-  gsap.to(laserEffects, {
+  gsap.to(postProcessEffect, {
     progress: 1,
     duration: 1,
     repeat: 1,
     yoyo: true,
     ease: "power1.inOut",
     onUpdate: () => {
-      shakeStrength.value = laserEffects.progress * 0.003;
-      chromaticStrength.value = laserEffects.progress;
+      shakeStrength.value = postProcessEffect.progress * 0.003;
+      chromaticStrength.value = postProcessEffect.progress;
     },
   });
 });
+
+window.addEventListener("game:hit", () => {
+  gsap.to(hitGrayscale, {
+    value: 1,
+    duration: 1,
+    ease: "power1.inOut",
+    overwrite: true,
+  });
+});
+
+const restoreColors = () => {
+  gsap.to(hitGrayscale, {
+    value: 0,
+    duration: 1,
+    ease: "power1.inOut",
+    overwrite: true,
+  });
+};
+window.addEventListener("game:start", restoreColors);
+window.addEventListener("game:restart", restoreColors);
 
 // ______________________________ Movements Input ______________________________//
 let movement;
@@ -218,14 +265,25 @@ const gizmo = control.getHelper();
 gizmo.userData.ignoreLaserRaycast = true;
 scene.add(gizmo);
 
+// ______________________________ Text ______________________________//
+
+const textManager = new Text();
+textManager.mesh.position.set(4, 4, 4);
+textManager.mesh.rotation.y = Math.PI * 0.25;
+
+scene.add(textManager.mesh);
+
 // ______________________________ Sound ______________________________//
 
 const soundManger = new SoundManager();
 // ______________________________ State Machine ______________________________//
 
 const stateMachine = new StateMachine();
-// const gameManagerGui = renderer.inspector.createParameters("gameManager").close();
-// gameManagerGui.add(gameManager, "fire").name("Fire");
+const stateMachineGui = renderer.inspector.createParameters("stateMachine").close();
+stateMachineGui.add(stateMachine, "start").name("Start");
+stateMachineGui.add(stateMachine, "stop").name("Stop");
+stateMachineGui.add(stateMachine, "restart").name("Restart");
+
 // stateMachine
 
 // game manager, recupere tout les event du jeux, conteni les
@@ -371,3 +429,31 @@ const tick = (currentTime) => {
 
 // Enregistrer une seule fois la fonction que Three.js appellera à chaque frame.
 renderer.setAnimationLoop(tick);
+
+// ______________________________ Game buttons ______________________________//
+const startButton = document.querySelector(".startButton");
+const restartButton = document.querySelector(".restartButton");
+
+const hideGameButtons = () => {
+  startButton.disabled = true;
+  restartButton.disabled = true;
+};
+
+startButton.addEventListener("click", () => {
+  if (startButton.disabled) return;
+  hideGameButtons();
+  stateMachine.start();
+});
+
+restartButton.addEventListener("click", () => {
+  if (restartButton.disabled) return;
+  hideGameButtons();
+  stateMachine.restart();
+});
+
+window.addEventListener("game:start", hideGameButtons);
+window.addEventListener("game:restart", hideGameButtons);
+window.addEventListener("game:stop", () => {
+  startButton.disabled = true;
+  restartButton.disabled = false;
+});

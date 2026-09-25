@@ -351,7 +351,7 @@ export default class LaserCanon extends EventEmitter {
 
       const finalNoise = noise1.add(noise2).div(2).pow(2);
 
-      const lightProgress = progress.mul(0.3);
+      const lightProgress = progress.add(0.45).mul(0.2);
 
       return finalNoise.sub(lightProgress).greaterThan(0).oneMinus();
 

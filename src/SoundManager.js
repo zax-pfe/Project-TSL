@@ -11,12 +11,21 @@ export default class SoundManager {
     this.soundLight = new Howl({ src: ["./Sounds/soundLight.wav"], volume: 0.2 });
     this.soundLaser = new Howl({ src: ["./Sounds/soundLaser.wav"], volume: 0.4 });
     this.soundBurn = new Howl({ src: ["./Sounds/soundBurn.wav"], volume: 0.6 });
+    this.regenerate = new Howl({ src: ["./Sounds/Regenerate.wav"], volume: 0.6 });
+
     this.soundWalk = new Howl({
       src: ["./Sounds/FootStepMetal.wav"],
       loop: true,
       volume: 0.1,
       rate: 1.7,
     });
+    this.soundLoop = new Howl({
+      src: ["./Sounds/soundLoop.wav"],
+      loop: true,
+      volume: 0.2,
+    });
+
+    this.soundLoop.play();
 
     window.addEventListener("game:fire", () => {
       if (this.eventFireReceived) return;
@@ -58,6 +67,14 @@ export default class SoundManager {
 
     window.addEventListener("game:stopWalking", () => {
       this.soundWalk.fade(0.2, 0, 0.2);
+    });
+
+    window.addEventListener("game:hit", () => {
+      this.soundWalk.stop();
+    });
+
+    window.addEventListener("game:restart", () => {
+      this.regenerate.play();
     });
   }
 }

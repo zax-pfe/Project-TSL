@@ -6,9 +6,14 @@ export default class StateMachine extends EventEmitter {
     super();
     this.states = { 0: "Intro", 1: "Game", 2: "Outro" };
     this.currentState = "Intro";
+
+    window.addEventListener("game:hit", () => {
+      this.stop();
+    });
   }
 
   start() {
+    console.log("started");
     this.currentState = "Game";
     window.dispatchEvent(new CustomEvent("game:start", {}));
   }
@@ -16,8 +21,9 @@ export default class StateMachine extends EventEmitter {
     this.currentState = "Outro";
     window.dispatchEvent(new CustomEvent("game:stop", {}));
   }
+
   restart() {
     this.currentState = "Game";
-    window.dispatchEvent(new CustomEvent("game:start", {}));
+    window.dispatchEvent(new CustomEvent("game:restart", {}));
   }
 }

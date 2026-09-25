@@ -46,11 +46,18 @@ export default class RaycasterManager {
       for (const hit of this.raycaster.intersectObjects(targets, false)) {
         if (hitObjects.has(hit.object)) continue;
         hitObjects.add(hit.object);
-        console.log(`[Laser ${laser.id}] Objet touche : ${hit.object.name || hit.object.type}`, {
-          object: hit.object,
-          distance: hit.distance,
-          point: hit.point,
-        });
+
+        if (hit.object.name == "characterBoundingBox") {
+          // console.log("character hit");
+          window.dispatchEvent(new CustomEvent("game:hit", {}));
+          // window.dispatchEvent(new CustomEvent("game:stop", {}));
+        }
+
+        // console.log(`[Laser ${laser.id}] Objet touche : ${hit.object.name}`, {
+        //   object: hit.object,
+        //   distance: hit.distance,
+        //   point: hit.point,
+        // });
       }
     }
   }

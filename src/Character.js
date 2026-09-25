@@ -39,6 +39,8 @@ export default class Character {
     this.isidle = true;
     this.isWalking = false;
 
+    this.canMove = true;
+
     this.progress = uniform(0);
 
     this.setMesh();
@@ -48,6 +50,14 @@ export default class Character {
 
     window.addEventListener("game:hit", (event) => {
       this.characterHit();
+    });
+
+    window.addEventListener("game:hit", (event) => {
+      this.canMove = false;
+    });
+    window.addEventListener("game:restart", (event) => {
+      this.canMove = true;
+      this.characterRestart();
     });
   }
 
@@ -62,15 +72,16 @@ export default class Character {
   }
 
   setBoundingBox() {
-    this.BoundingBoxGeometry = new THREE.SphereGeometry(2, 32, 32);
+    this.BoundingBoxGeometry = new THREE.SphereGeometry(1.5, 32, 32);
     this.BoundingBoxMaterial = new THREE.MeshBasicNodeMaterial({
       color: 0xff1111,
       transparent: true,
-      opacity: 0.1,
+      opacity: 0.0,
       // Le volume de collision ne doit pas masquer le personnage transparent.
       depthWrite: false,
     });
     this.BoundingBoxMesh = new THREE.Mesh(this.BoundingBoxGeometry, this.BoundingBoxMaterial);
+    this.BoundingBoxMesh.name = "characterBoundingBox";
     this.BoundingBoxMesh.position.y = 1;
     this.mesh.add(this.BoundingBoxMesh);
   }
@@ -143,13 +154,30 @@ export default class Character {
     gsap.to(dummy, {
       progress: 1,
       duration: 2,
-      ease: "linera",
+      ease: "linear",
       onUpdate: () => {
         this.progress.value = dummy.progress;
       },
       onComplete: () => {
         console.log("anim finished");
       },
+    });
+  }
+
+  characterRestart() {
+    console.log("character restart");
+    this.mesh.position.set(0, 0.5, 0);
+
+    const dummy = { progress: 1 };
+
+    gsap.to(dummy, {
+      progress: 0,
+      duration: 2,
+      ease: "linear",
+      onUpdate: () => {
+        this.progress.value = dummy.progress;
+      },
+      onComplete: () => {},
     });
   }
 
@@ -162,6 +190,7 @@ export default class Character {
   }
 
   animate(movement, deltaTime) {
+    if (!this.canMove) return;
     const translation = this.computeMovement(movement, deltaTime);
     const previousX = this.mesh.position.x;
     const previousZ = this.mesh.position.z;
