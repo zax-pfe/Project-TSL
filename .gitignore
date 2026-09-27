@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output and Vite cache
+dist/
+.vite/
+
+# Local build checks and temporary files
+.build-check/
+.tmp/
+.tmp-*/
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
