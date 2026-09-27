@@ -11,6 +11,9 @@ A browser-based 3D game featuring a character on a platform with lasers. The pro
 - **Three.js** for the 3D scene and rendering.
 - **TSL (Three.js Shading Language)** for writing custom shaders in JavaScript.
 
+<img width="484" height="307" alt="Screenshot 2026-09-27 152520" src="https://github.com/user-attachments/assets/f6f094cc-ec50-4cdd-b697-a20fd9ea28d1" />
+
+
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
 Run the following commands:
